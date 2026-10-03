@@ -1,0 +1,7 @@
+{
+  "name": "StudyDezk",
+  "description": "Production-quality, browser-only offline study suite with PDF/OCR extraction, extractive summarization, rule-based flashcards, semantic search, and Mermaid diagrams.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
