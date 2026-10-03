@@ -61,14 +61,24 @@ export function mergeSlideLines(rawText: string): SlideMergeResult {
 
     const cleanLine = line.replace(BULLET_REGEX, '').trim();
 
+    // Preserve explicit page / slide delimiter markers
+    if (/^---+\s*(?:Slide|Page)\b/i.test(cleanLine)) {
+      flushBuffer();
+      processedParagraphs.push(cleanLine);
+      continue;
+    }
+
+    const isDateOrNumber = /^(?:\d{4}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:Slide|Page)?\s*\d+)$/i.test(cleanLine);
+
     // Check if line looks like a slide title or standalone heading
     const isHeading =
-      (line.length < 50 && /^[A-Z0-9\s:,-]+$/.test(cleanLine) && !/[.]/.test(cleanLine)) ||
-      HEADING_INDICATOR_REGEX.test(cleanLine);
+      !isDateOrNumber &&
+      ((line.length < 50 && /^[A-Z0-9\s:,-]+$/.test(cleanLine) && !/[.]/.test(cleanLine) && cleanLine.length > 3) ||
+        HEADING_INDICATOR_REGEX.test(cleanLine));
 
     if (isHeading) {
       flushBuffer();
-      processedParagraphs.push(cleanLine.endsWith(':') ? cleanLine : cleanLine + ':');
+      processedParagraphs.push(cleanLine);
       continue;
     }
 
@@ -84,8 +94,10 @@ export function mergeSlideLines(rawText: string): SlideMergeResult {
         const startsWithLower = /^[a-z0-9]/.test(cleanLine);
         const endsWithPunct = /[.!?]/.test(lastChar);
 
-        // If previous line did not end with sentence punctuation or current starts with lowercase, merge
-        if (!endsWithPunct || startsWithLower || lastChar === ',') {
+        // Only rejoin words split by a line-break hyphen
+        if (lastPart.endsWith('-')) {
+          currentBuffer[currentBuffer.length - 1] = lastPart.slice(0, -1) + cleanLine;
+        } else if (!endsWithPunct || startsWithLower || lastChar === ',') {
           currentBuffer.push(cleanLine);
         } else {
           flushBuffer();

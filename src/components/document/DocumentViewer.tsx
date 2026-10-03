@@ -6,6 +6,7 @@ import { GlossaryView } from '../glossary/GlossaryView';
 import { DiagramViewer } from '../diagrams/DiagramViewer';
 import { ExtractedTextViewer } from './ExtractedTextViewer';
 import { SessionHistoryView } from '../summary/SessionHistoryView';
+import { StudyChatPanel } from '../chat/StudyChatPanel';
 import {
   FileText,
   Sparkles,
@@ -15,7 +16,9 @@ import {
   Calendar,
   Layers,
   History,
+  MessageSquare,
 } from 'lucide-react';
+import { CourseCompilationViewer } from '../compilation/CourseCompilationViewer';
 
 export const DocumentViewer: React.FC = () => {
   const {
@@ -27,22 +30,34 @@ export const DocumentViewer: React.FC = () => {
     glossaryTerms,
     sessionHistories,
     activeWorkspaceId,
+    chatThreads,
+    activeCompilation,
   } = useStudyStore();
 
   const currentDoc = documents.find((d) => d.id === activeDocumentId);
 
-  if (!currentDoc) {
+  // If on summary tab, ALWAYS display the course's unified single compilation!
+  if (activeTab === 'summary') {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white dark:bg-black">
-        <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-white flex items-center justify-center mb-3">
-          <Layers className="w-7 h-7" />
-        </div>
-        <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
-          No Lecture Document Selected
-        </h3>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mt-1">
-          Select a lecture from the sidebar or upload a new PDF or photo to begin studying.
-        </p>
+      <main className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black">
+        <CourseCompilationViewer />
+      </main>
+    );
+  }
+
+  // If no document selected, check other tabs
+  if (!currentDoc) {
+    if (activeTab === 'chat') {
+      return (
+        <main className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black">
+          <StudyChatPanel />
+        </main>
+      );
+    }
+
+    return (
+      <main className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black">
+        <CourseCompilationViewer />
       </main>
     );
   }
@@ -53,14 +68,18 @@ export const DocumentViewer: React.FC = () => {
   const docSessionsCount = sessionHistories.filter(
     (s) => s.workspaceId === activeWorkspaceId && s.documentId === currentDoc.id
   ).length;
+  const docChatsCount = chatThreads.filter(
+    (t) => t.workspaceId === activeWorkspaceId
+  ).length;
 
   const tabs: Array<{
-    id: 'summary' | 'flashcards' | 'glossary' | 'diagrams' | 'rawText' | 'history';
+    id: 'summary' | 'flashcards' | 'glossary' | 'diagrams' | 'history' | 'chat' | 'rawText';
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     count?: number;
   }> = [
     { id: 'summary', label: 'Summary', icon: Sparkles },
+    { id: 'chat', label: 'Study Chat', icon: MessageSquare, count: docChatsCount },
     { id: 'flashcards', label: 'Flashcards', icon: BookOpen, count: docCardsCount },
     { id: 'glossary', label: 'Glossary', icon: FileText, count: docTermsCount },
     { id: 'diagrams', label: 'Diagrams', icon: GitFork },
@@ -131,7 +150,7 @@ export const DocumentViewer: React.FC = () => {
 
       {/* Feature Content Switcher */}
       <div className="flex-1 flex overflow-hidden bg-white dark:bg-black">
-        {activeTab === 'summary' && <SummaryPanel />}
+        {activeTab === 'chat' && <StudyChatPanel />}
         {activeTab === 'flashcards' && <FlashcardDeck />}
         {activeTab === 'glossary' && <GlossaryView />}
         {activeTab === 'diagrams' && <DiagramViewer />}

@@ -101,3 +101,24 @@ interface ChatThread {
 }
 ```
 Ready for local LLM integration without schema migrations.
+
+---
+
+## 📚 Unified Course Compilation System
+
+Each course workspace features exactly **one continuous compilation** uniting all course materials:
+1. **Incremental Cached Document Pipeline (`db.cachedOutputs`)**:
+   - Each uploaded document computes a deterministic content hash (`computeFileContentHash`).
+   - Cleaned text, structural sections, inline figures, embeddings, flashcards, and glossary items are cached in IndexedDB.
+   - Processing duplicate files is immediately intercepted with an informational warning.
+2. **Compilation Assembler (`src/logic/compilation/incrementalCompiler.ts`)**:
+   - Compiles the single course view strictly from cached artifacts without re-reading source files.
+   - Preserves user sequence ordering (`DocumentCompilationConfig`), per-document inclusions, and detail preset overrides (`brief`, `standard`, `detailed`, `exam`).
+3. **Cross-Document Deduplication (`src/logic/compilation/crossDocDeduplicator.ts`)**:
+   - Identifies repetitive definitions and high-similarity statements across different lectures.
+   - Retains the most detailed instance once and tags cross-reference badges (e.g. `also in Lecture 3 (p. 2)`).
+4. **Manual User Edit Preservation (`db.manualEdits`)**:
+   - Student notes and custom summary rewrites are keyed by `sectionId` in a separate table, guaranteeing they are never overwritten during re-indexing or recompilation.
+5. **Standalone Export Engine (`src/logic/compilation/compilationExporter.ts`)**:
+   - Generates self-contained, printable HTML documents (with inline base64 figures and `@media print` rules) and complete Markdown exports with images.
+

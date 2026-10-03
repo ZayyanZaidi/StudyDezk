@@ -6,6 +6,44 @@ import { DiagramSpec } from '../types/diagram';
 import { Workspace } from '../types/workspace';
 import { SummarySession } from '../types/session';
 import { ChatThread, ChatMessage } from '../types/chat';
+import { ExtractedFigure, SerializedFigure } from '../types/figure';
+
+import {
+  CachedDocumentOutput,
+  ManualUserEdit,
+  CourseCompilation,
+} from '../types/compilation';
+
+export async function blobToDataUrl(blob: Blob): Promise<string> {
+  if (typeof blob.arrayBuffer === 'function') {
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    return `data:${blob.type || 'image/webp'};base64,${base64}`;
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)?.[1] || 'image/webp';
+  const binary = atob(base64);
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    array[i] = binary.charCodeAt(i);
+  }
+  return new Blob([array], { type: mime });
+}
 
 export interface BackupPayload {
   version: number;
@@ -18,6 +56,9 @@ export interface BackupPayload {
     totalGlossaryTerms: number;
     totalDiagrams: number;
     totalSessions: number;
+    totalFigures?: number;
+    totalChatThreads?: number;
+    totalCompilations?: number;
   };
   data: {
     workspaces: Workspace[];
@@ -28,6 +69,10 @@ export interface BackupPayload {
     sessionHistories: SummarySession[];
     chatThreads?: ChatThread[];
     chatMessages?: ChatMessage[];
+    extractedFigures?: SerializedFigure[];
+    cachedOutputs?: CachedDocumentOutput[];
+    manualEdits?: ManualUserEdit[];
+    compilations?: CourseCompilation[];
   };
 }
 
@@ -40,8 +85,44 @@ export async function exportLibraryToJson(): Promise<string> {
   const sessionHistories = await db.sessionHistories.toArray();
   const chatThreads = await db.chatThreads.toArray();
   const chatMessages = await db.chatMessages.toArray();
+  const figures = await db.extractedFigures.toArray();
+  const cachedOutputs = await db.cachedOutputs.toArray();
+  const manualEdits = await db.manualEdits.toArray();
+  const compilations = await db.compilations.toArray();
 
-  // Strip any heavy base64/thumbnail images from documents to keep saved files ultra-light
+  // Convert figure Blobs to base64 Data URLs for JSON portability
+  const serializedFigures: SerializedFigure[] = [];
+  for (const fig of figures) {
+    try {
+      const sourceBlob = fig.blob || fig.fullBlob;
+      const fullDataUrl = await blobToDataUrl(sourceBlob);
+      const thumbnailDataUrl = await blobToDataUrl(fig.thumbnailBlob || sourceBlob);
+      serializedFigures.push({
+        id: fig.id,
+        workspaceId: fig.workspaceId,
+        documentId: fig.documentId,
+        pageNumber: fig.pageNumber,
+        figureIndex: fig.figureIndex ?? 0,
+        caption: fig.caption,
+        type: fig.type,
+        dataUrl: fullDataUrl,
+        fullDataUrl,
+        thumbnailDataUrl,
+        width: fig.width,
+        height: fig.height,
+        cropBox: fig.cropBox,
+        status: fig.status || 'kept',
+        userStatus: fig.userStatus || fig.status || 'kept',
+        score: fig.score,
+        detectedBy: fig.detectedBy,
+        createdAt: fig.createdAt,
+      });
+    } catch (err) {
+      console.warn(`Failed to serialize figure ${fig.id}:`, err);
+    }
+  }
+
+  // Keep saved files light
   const lightweightDocuments: StudyDocument[] = documents.map((doc) => ({
     ...doc,
     pages: doc.pages.map((p) => ({
@@ -50,12 +131,12 @@ export async function exportLibraryToJson(): Promise<string> {
       hasTextLayer: p.hasTextLayer,
       ocrApplied: p.ocrApplied,
       wordCount: p.wordCount,
-      thumbnailUrl: undefined, // Omit heavy image data
+      thumbnailUrl: undefined,
     })),
   }));
 
   const backup: BackupPayload = {
-    version: 2,
+    version: 3,
     appName: 'StudyDezk',
     exportedAt: new Date().toISOString(),
     metadata: {
@@ -65,6 +146,9 @@ export async function exportLibraryToJson(): Promise<string> {
       totalGlossaryTerms: glossary.length,
       totalDiagrams: diagrams.length,
       totalSessions: sessionHistories.length,
+      totalFigures: serializedFigures.length,
+      totalChatThreads: chatThreads.length,
+      totalCompilations: compilations.length,
     },
     data: {
       workspaces,
@@ -73,8 +157,12 @@ export async function exportLibraryToJson(): Promise<string> {
       glossary,
       diagrams,
       sessionHistories,
-      chatThreads: [],
-      chatMessages: [],
+      chatThreads,
+      chatMessages,
+      extractedFigures: serializedFigures,
+      cachedOutputs,
+      manualEdits,
+      compilations,
     },
   };
 
@@ -103,6 +191,7 @@ export interface ImportResult {
     glossary: number;
     diagrams: number;
     sessions: number;
+    figures: number;
   };
 }
 
@@ -113,7 +202,6 @@ export async function importLibraryFromJson(
   try {
     const parsed = JSON.parse(jsonString);
 
-    // Validate signature
     if (!parsed || (parsed.appName !== 'StudyDezk' && parsed.appName !== 'StudyDesk' && !parsed.data)) {
       throw new Error('Invalid backup file format: Missing StudyDezk signature.');
     }
@@ -127,7 +215,42 @@ export async function importLibraryFromJson(
       sessionHistories = [],
       chatThreads = [],
       chatMessages = [],
+      extractedFigures = [],
+      cachedOutputs = [],
+      manualEdits = [],
+      compilations = [],
     } = parsed.data || {};
+
+    // Convert serialized figures back to Blobs
+    const restoredFigures: ExtractedFigure[] = [];
+    for (const fig of extractedFigures as SerializedFigure[]) {
+      try {
+        const fullBlob = dataUrlToBlob(fig.fullDataUrl);
+        const thumbnailBlob = dataUrlToBlob(fig.thumbnailDataUrl);
+        restoredFigures.push({
+          id: fig.id,
+          workspaceId: fig.workspaceId,
+          documentId: fig.documentId,
+          pageNumber: fig.pageNumber,
+          figureIndex: fig.figureIndex ?? 0,
+          caption: fig.caption,
+          type: fig.type,
+          blob: fullBlob,
+          fullBlob,
+          thumbnailBlob,
+          width: fig.width,
+          height: fig.height,
+          cropBox: fig.cropBox,
+          status: fig.status || 'kept',
+          userStatus: fig.userStatus || fig.status || 'kept',
+          score: fig.score,
+          detectedBy: fig.detectedBy,
+          createdAt: fig.createdAt || Date.now(),
+        });
+      } catch (err) {
+        console.warn(`Failed to deserialize figure ${fig.id}:`, err);
+      }
+    }
 
     await db.transaction(
       'rw',
@@ -140,6 +263,10 @@ export async function importLibraryFromJson(
         db.sessionHistories,
         db.chatThreads,
         db.chatMessages,
+        db.extractedFigures,
+        db.cachedOutputs,
+        db.manualEdits,
+        db.compilations,
       ],
       async () => {
         if (mode === 'replace') {
@@ -151,6 +278,10 @@ export async function importLibraryFromJson(
           await db.sessionHistories.clear();
           await db.chatThreads.clear();
           await db.chatMessages.clear();
+          await db.extractedFigures.clear();
+          await db.cachedOutputs.clear();
+          await db.manualEdits.clear();
+          await db.compilations.clear();
         }
 
         if (workspaces.length > 0) {
@@ -177,12 +308,24 @@ export async function importLibraryFromJson(
         if (chatMessages.length > 0) {
           await db.chatMessages.bulkPut(chatMessages);
         }
+        if (restoredFigures.length > 0) {
+          await db.extractedFigures.bulkPut(restoredFigures);
+        }
+        if (cachedOutputs.length > 0) {
+          await db.cachedOutputs.bulkPut(cachedOutputs);
+        }
+        if (manualEdits.length > 0) {
+          await db.manualEdits.bulkPut(manualEdits);
+        }
+        if (compilations.length > 0) {
+          await db.compilations.bulkPut(compilations);
+        }
       }
     );
 
     return {
       success: true,
-      message: `Successfully imported ${documents.length} documents and ${sessionHistories.length} sessions.`,
+      message: `Successfully imported ${documents.length} documents, ${sessionHistories.length} sessions, and ${restoredFigures.length} figures.`,
       importedCounts: {
         workspaces: workspaces.length,
         documents: documents.length,
@@ -190,13 +333,14 @@ export async function importLibraryFromJson(
         glossary: glossary.length,
         diagrams: diagrams.length,
         sessions: sessionHistories.length,
+        figures: restoredFigures.length,
       },
     };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Unknown import error';
+  } catch (err: any) {
+    console.error('Import failed:', err);
     return {
       success: false,
-      message: `Failed to import backup: ${msg}`,
+      message: err.message || 'Import failed due to an invalid JSON structure.',
       importedCounts: {
         workspaces: 0,
         documents: 0,
@@ -204,6 +348,7 @@ export async function importLibraryFromJson(
         glossary: 0,
         diagrams: 0,
         sessions: 0,
+        figures: 0,
       },
     };
   }

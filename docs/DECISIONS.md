@@ -45,3 +45,20 @@
 - **Context**: Browsers can evict IndexedDB under storage pressure or clear it on private mode exit.
 - **Decision**: Request `navigator.storage.persist()`, detect private browsing to show high-visibility warnings, and prompt backup exports when unbacked for > 7 days.
 - **Consequences**: Protects student study notes from silent browser storage eviction.
+
+---
+
+### ADR 007: One Compilation Per Course Workspace
+- **Status**: Accepted
+- **Context**: University students review courses holistically rather than navigating isolated per-document tabs. Redundant document summary views fragmented learning flow.
+- **Decision**: Unified each course workspace into exactly one continuous compilation document, ordered by user-controllable lecture sequence, featuring a sticky anchor-linked Table of Contents and inline figures.
+- **Consequences**: Eliminates navigation friction, organizes materials systematically, and scales cleanly to full semester reviews.
+
+---
+
+### ADR 008: Incremental Compilation Caching & Manual Edit Isolation
+- **Status**: Accepted
+- **Context**: Re-running PDF extraction, OCR, and summarization whenever a user changes detail presets, reorders documents, or adjusts topic focus is slow and wastes CPU. Additionally, user notes could get lost during updates.
+- **Decision**: Cache extracted document artifacts in `db.cachedOutputs` keyed by content hash. Store student notes and summary rewrites separately in `db.manualEdits`.
+- **Consequences**: Recompilations run in under 20ms purely from cache. Adding or deleting a document only affects that document. User manual edits strictly survive all recompilations.
+

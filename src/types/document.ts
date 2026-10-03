@@ -7,6 +7,8 @@ export type CourseCategory =
 
 export interface DocumentPage {
   pageNumber: number;
+  title?: string;
+  heading?: string;
   text: string;
   hasTextLayer: boolean;
   ocrApplied: boolean;

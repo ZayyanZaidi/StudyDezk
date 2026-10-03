@@ -43,7 +43,7 @@ export const BackupModal: React.FC = () => {
       setImportStatus({
         success: false,
         message: err instanceof Error ? err.message : 'Failed to read file',
-        importedCounts: { workspaces: 0, documents: 0, flashcards: 0, glossary: 0, diagrams: 0, sessions: 0 },
+        importedCounts: { workspaces: 0, documents: 0, flashcards: 0, glossary: 0, diagrams: 0, sessions: 0, figures: 0 },
       });
     } finally {
       setIsImporting(false);

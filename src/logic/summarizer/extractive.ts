@@ -3,6 +3,7 @@ import { splitSentences } from '../nlp/segmenter';
 import { rankSentences } from '../nlp/textrank';
 import { cosineSimilarity, sentenceTokenOverlap } from '../nlp/similarity';
 import { tokenize } from '../nlp/stopwords';
+import { formatParagraphSummary } from './paragraphFormatter';
 
 export class ExtractiveSummarizer implements Summarizer {
   async summarize(text: string, options: SummarizeOptions): Promise<SummaryResult> {
@@ -177,19 +178,20 @@ export class ExtractiveSummarizer implements Summarizer {
     // 5. Sort selected sentences back to original chronological order to preserve flow
     finalSelectedWithHighlights.sort((a, b) => a.originalIndex - b.originalIndex);
 
-    // 6. Format output
-    const formattedParagraph = finalSelectedWithHighlights.map((s) => s.sentence).join(' ');
-    const formattedBullets = finalSelectedWithHighlights.map((s) =>
-      s.sentence.replace(/^\s*[-•]\s*/, '')
-    );
+    // 6. Format output with paragraphFormatter (section grouping, bold lead-in, length control)
+    const formattedResult = formatParagraphSummary(finalSelectedWithHighlights, text, {
+      paragraphLength: options.paragraphLength || 'medium',
+      outputStyle: options.outputStyle,
+    });
+
     const keyPointHighlights = finalSelectedWithHighlights
       .filter((s) => s.isKeyPoint)
       .map((s) => s.sentence.replace(/^\s*[-•]\s*/, ''));
 
     const outputText =
       options.outputStyle === 'bullets'
-        ? formattedBullets.map((b) => `• ${b}`).join('\n\n')
-        : formattedParagraph;
+        ? formattedResult.bullets.map((b) => `• ${b}`).join('\n\n')
+        : formattedResult.fullFormattedText;
 
     const summaryWords = outputText.split(/\s+/).filter(Boolean).length;
     const originalWords = text.split(/\s+/).filter(Boolean).length;
@@ -199,10 +201,11 @@ export class ExtractiveSummarizer implements Summarizer {
 
     return {
       text: outputText,
-      bullets: formattedBullets,
-      highlights: keyPointHighlights.length > 0 ? keyPointHighlights : formattedBullets.slice(0, 2),
+      bullets: formattedResult.bullets,
+      highlights: keyPointHighlights.length > 0 ? keyPointHighlights : formattedResult.bullets.slice(0, 2),
       selectedSentences: finalSelectedWithHighlights,
       allSentences: allScores,
+      structuredSections: formattedResult.sections,
       originalSentenceCount: totalCount,
       summarySentenceCount: finalSelectedWithHighlights.length,
       compressionRatio,

@@ -22,10 +22,13 @@ This document outlines future planned features and evolutionary enhancements for
 
 ---
 
-## 🔮 Phase 2: Local WebLLM Chat Threads & Synthesis (Planned)
-- [ ] Connect existing `chatThreads` and `chatMessages` schema to WebLLM (`@mlc-ai/web-llm`) running via WebGPU.
+## 🔮 Phase 2: Local Study Chat Threads & Synthesis
+- [x] Connect `chatThreads` and `chatMessages` schema to grounded, token-efficient QA engine.
+- [x] Support local document Q&A chat referencing extracted page sentences with citation indices and token savings metrics.
+- [x] Multi-document & multi-image batch ingestion with simultaneous PDF/OCR processing queue.
+- [x] Typable topics for study chats without fixed dropdown or option constraints.
+- [ ] Connect existing `chatThreads` schema to optional WebLLM (`@mlc-ai/web-llm`) running via WebGPU.
 - [ ] Implement `WebLLMSummarizer` implementing the existing `Summarizer` interface.
-- [ ] Support local document Q&A chat referencing extracted page sentences with citation indices.
 - [ ] WebGPU device detection with graceful fallback to extractive TextRank on devices lacking WebGPU support.
 
 ---

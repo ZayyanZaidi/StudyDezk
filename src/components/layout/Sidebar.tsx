@@ -11,6 +11,7 @@ import {
   Sparkles,
   History,
   FolderCog,
+  MessageSquare,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -29,6 +30,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     glossaryTerms,
     sessionHistories,
     setWorkspaceModalOpen,
+    chatThreads,
+    activeTab,
+    setActiveTab,
   } = useStudyStore();
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -38,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const wsCards = flashcards.filter((c) => c.workspaceId === activeWorkspaceId);
   const wsTerms = glossaryTerms.filter((t) => t.workspaceId === activeWorkspaceId);
   const wsSessions = sessionHistories.filter((s) => s.workspaceId === activeWorkspaceId);
+  const wsThreads = chatThreads.filter((t) => t.workspaceId === activeWorkspaceId);
 
   const handleDelete = (e: React.MouseEvent, id: string, title: string) => {
     e.stopPropagation();
@@ -79,14 +84,56 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           </div>
         </div>
 
-        {/* Upload Action Button */}
-        <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 bg-white/40 dark:bg-black">
+        {/* Actions Bar */}
+        <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 bg-white/40 dark:bg-black space-y-2">
           <button
             onClick={() => setUploadModalOpen(true)}
             className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-xs font-bold text-white dark:text-black shadow-xs transition active:scale-98 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Upload Notes or Slides</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('summary');
+              onCloseMobile?.();
+            }}
+            className={`w-full flex items-center justify-between py-1.5 px-3 rounded-xl border text-xs font-medium transition cursor-pointer ${
+              activeTab === 'summary'
+                ? 'border-indigo-600 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 font-bold'
+                : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Unified Compilation</span>
+            </div>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-bold">
+              1 Doc
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('chat');
+              onCloseMobile?.();
+            }}
+            className={`w-full flex items-center justify-between py-1.5 px-3 rounded-xl border text-xs font-medium transition cursor-pointer ${
+              activeTab === 'chat'
+                ? 'border-neutral-900 bg-neutral-100 dark:border-white dark:bg-neutral-900 text-neutral-900 dark:text-white font-semibold'
+                : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+              <span>Study Chat (Any Topic)</span>
+            </div>
+            {wsThreads.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-neutral-200 dark:bg-neutral-800 font-bold">
+                {wsThreads.length}
+              </span>
+            )}
           </button>
         </div>
 
