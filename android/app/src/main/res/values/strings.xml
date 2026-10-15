@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">StudyDezk</string>
+    <string name="title_activity_main">StudyDezk</string>
+    <string name="package_name">com.ned.se23022.studydezk</string>
+    <string name="custom_url_scheme">com.ned.se23022.studydezk</string>
+</resources>
