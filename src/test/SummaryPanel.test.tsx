@@ -16,14 +16,15 @@ describe('SummaryPanel Component', () => {
     });
   });
 
-  it('renders automatic summarization controls and action buttons without manual limit sliders', () => {
+  it('renders automatic summarization controls and multi-representation views', () => {
     render(<SummaryPanel />);
-    expect(screen.getByText(/Key Points & Salience/i)).toBeInTheDocument();
-    expect(screen.getByText(/Auto-Covering All Sections/i)).toBeInTheDocument();
-    expect(screen.getByText('Output Format')).toBeInTheDocument();
+    expect(screen.getByText(/Living Study Guide/i)).toBeInTheDocument();
+    expect(screen.getByText(/Representation View/i)).toBeInTheDocument();
+    expect(screen.getByText('Structured')).toBeInTheDocument();
     expect(screen.getByText('Key Bullets')).toBeInTheDocument();
-    expect(screen.getByText('Paragraph')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/e\.g\. focus on attack types/i)).toBeInTheDocument();
-    expect(screen.getByText(/Synthesize Key Points|Analyzing All Sections/i)).toBeInTheDocument();
+    expect(screen.getByText('Prose Narrative')).toBeInTheDocument();
+    expect(screen.getByText(/Definitions & TL;DR/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/focus on/i)).toBeInTheDocument();
+    expect(screen.getByText(/Regenerate Summary|Analyzing Document Sections/i)).toBeInTheDocument();
   });
 });

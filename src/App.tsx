@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useStudyStore } from './store/useStudyStore';
+import { useAuthStore } from './store/useAuthStore';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { DocumentViewer } from './components/document/DocumentViewer';
@@ -13,15 +14,21 @@ import { BackupModal } from './components/backup/BackupModal';
 import { WorkspaceModal } from './components/workspace/WorkspaceModal';
 import { UsabilityGuideModal } from './components/guide/UsabilityGuideModal';
 import { DurabilityBanner } from './components/durability/DurabilityBanner';
+import { AuthModal } from './components/auth/AuthModal';
+import { AccountModal } from './components/account/AccountModal';
+import { PricingModal } from './components/pricing/PricingModal';
+import { CustomSettingsModal } from './components/settings/CustomSettingsModal';
 import { Menu, X } from 'lucide-react';
 
 export default function App() {
   const { initialize } = useStudyStore();
+  const { initializeAuth } = useAuthStore();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     initialize();
-  }, [initialize]);
+    initializeAuth();
+  }, [initialize, initializeAuth]);
 
   return (
     <div className="h-[100dvh] w-full bg-white dark:bg-black flex flex-col font-sans text-neutral-900 dark:text-neutral-100 antialiased overflow-hidden transition-colors">
@@ -74,6 +81,10 @@ export default function App() {
       <BackupModal />
       <WorkspaceModal />
       <UsabilityGuideModal />
+      <AuthModal />
+      <AccountModal />
+      <PricingModal />
+      <CustomSettingsModal />
     </div>
   );
 }

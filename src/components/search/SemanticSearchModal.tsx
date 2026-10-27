@@ -5,11 +5,23 @@ import { SearchResult } from '../../types/search';
 import { Search, X, Sparkles, FileText, ArrowRight, Loader2 } from 'lucide-react';
 
 export const SemanticSearchModal: React.FC = () => {
-  const { searchOpen, setSearchOpen, selectedCourse, setActiveDocument, setActiveTab } = useStudyStore();
+  const {
+    searchOpen,
+    setSearchOpen,
+    activeWorkspaceId,
+    setActiveWorkspace,
+    workspaces,
+    documents,
+    setActiveDocument,
+    setActiveTab,
+  } = useStudyStore();
   const [query, setQuery] = useState('');
+  const [scope, setScope] = useState<'workspace' | 'all'>('workspace');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
 
   useEffect(() => {
     if (searchOpen) {
@@ -48,9 +60,18 @@ export const SemanticSearchModal: React.FC = () => {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await searchDocuments(cleanQuery, selectedCourse);
+        const filterCourse = scope === 'workspace' && activeWs ? activeWs.course : 'All Courses';
+        const res = await searchDocuments(cleanQuery, filterCourse);
         if (!isCancelled) {
-          setResults(res);
+          // If in workspace scope, filter to this workspace
+          const finalRes =
+            scope === 'workspace'
+              ? res.filter((r) => {
+                  const doc = documents.find((d) => d.id === r.documentId);
+                  return doc?.workspaceId === activeWorkspaceId;
+                })
+              : res;
+          setResults(finalRes);
         }
       } catch (err) {
         console.error('Search error:', err);
@@ -65,11 +86,15 @@ export const SemanticSearchModal: React.FC = () => {
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [query, selectedCourse]);
+  }, [query, scope, activeWorkspaceId, activeWs, documents]);
 
   if (!searchOpen) return null;
 
   const handleSelectResult = (result: SearchResult) => {
+    const doc = documents.find((d) => d.id === result.documentId);
+    if (doc && doc.workspaceId !== activeWorkspaceId) {
+      setActiveWorkspace(doc.workspaceId);
+    }
     setActiveDocument(result.documentId);
     setActiveTab('rawText');
     setSearchOpen(false);
@@ -84,7 +109,7 @@ export const SemanticSearchModal: React.FC = () => {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search across all lecture slides and notes (e.g. CIA triad, IaaS vs PaaS, unit test cycle)..."
+            placeholder="Search across lecture slides and notes (e.g. CIA triad, IaaS vs PaaS)..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none"
@@ -96,6 +121,35 @@ export const SemanticSearchModal: React.FC = () => {
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Search Scope Filter */}
+        <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-850 bg-neutral-50/70 dark:bg-neutral-900/50 flex items-center justify-between text-xs">
+          <span className="text-[11px] text-neutral-500">Scope:</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setScope('workspace')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                scope === 'workspace'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-black shadow-2xs'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
+              }`}
+            >
+              Current Course ({activeWs?.name || 'Workspace'})
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope('all')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                scope === 'all'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-black shadow-2xs'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
+              }`}
+            >
+              All Courses
+            </button>
+          </div>
         </div>
 
         {/* Results List */}

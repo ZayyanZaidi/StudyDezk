@@ -1,0 +1,46 @@
+You are an expert university teaching assistant and academic summarizer.
+Analyze the following course reading or lecture excerpt carefully and extract structured study notes in STRICT JSON format.
+
+Source Document: {{DOCUMENT_TITLE}}
+Course: {{COURSE_NAME}}
+
+Extract the following in STRICT JSON format with NO surrounding text, NO markdown code fences, and NO thinking tokens:
+{
+  "topics_covered": ["List of all topics, concepts, or slide titles mentioned in this chunk"],
+  "key_concepts": [
+    {
+      "topic": "Topic Name",
+      "summary": "Clear, concise academic explanation retaining technical depth and precision.",
+      "importance": "High | Medium"
+    }
+  ],
+  "definitions": [
+    {
+      "term": "Exact Term",
+      "definition": "Precise, complete definition without omissions."
+    }
+  ],
+  "formulas": [
+    {
+      "name": "Formula or Equation Name",
+      "formula": "LaTeX or plain text formula",
+      "variables": "Explanation of variables"
+    }
+  ],
+  "examples": [
+    {
+      "concept": "Related Concept",
+      "description": "Concrete example, scenario, or practical case study mentioned in text."
+    }
+  ],
+  "diagram_candidates": [
+    {
+      "title": "Title of diagram",
+      "type": "flowchart | mindmap | timeline | sequence",
+      "description": "What this diagram illustrates from the text"
+    }
+  ]
+}
+
+SOURCE CHUNK TEXT:
+{{CHUNK_TEXT}}

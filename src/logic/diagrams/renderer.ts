@@ -1,3 +1,5 @@
+import { sanitizeMermaidCode, buildEmergencyFallbackMermaid } from './sanitizer';
+
 let mermaidInstance: typeof import('mermaid').default | null = null;
 let initialized = false;
 
@@ -11,7 +13,7 @@ export async function getMermaid() {
   return mermaidInstance;
 }
 
-export async function renderMermaidSvg(id: string, code: string, isDark = false): Promise<string> {
+export async function renderMermaidSvg(id: string, rawCode: string, isDark = false): Promise<string> {
   const mermaid = await getMermaid();
   const targetTheme = isDark ? 'dark' : 'neutral';
 
@@ -52,8 +54,23 @@ export async function renderMermaidSvg(id: string, code: string, isDark = false)
   }
 
   const cleanId = `mermaid-${id.replace(/[^a-zA-Z0-9_-]/g, '_')}-${Math.random().toString(36).slice(2, 7)}`;
-  const { svg } = await mermaid.render(cleanId, code);
-  return svg;
+  const sanitized = sanitizeMermaidCode(rawCode);
+
+  try {
+    const { svg } = await mermaid.render(cleanId, sanitized);
+    return svg;
+  } catch (err: any) {
+    console.warn('Initial Mermaid render error, attempting auto-repair fallback:', err?.message || err);
+    // Auto-repair attempt 1: fallback minimal graph
+    try {
+      const fallbackCode = buildEmergencyFallbackMermaid(id, err?.message);
+      const retryId = `${cleanId}-retry`;
+      const { svg } = await mermaid.render(retryId, fallbackCode);
+      return svg;
+    } catch {
+      throw err;
+    }
+  }
 }
 
 export function exportDiagramAsSvg(svgContent: string, fileName = 'diagram.svg') {

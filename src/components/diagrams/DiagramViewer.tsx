@@ -6,6 +6,7 @@ import {
   exportDiagramAsSvg,
   exportDiagramAsPng,
 } from '../../logic/diagrams/renderer';
+import { sanitizeMermaidCode } from '../../logic/diagrams/sanitizer';
 import {
   GitFork,
   Workflow,
@@ -15,11 +16,13 @@ import {
   Check,
   AlertTriangle,
   RotateCcw,
+  Wrench,
 } from 'lucide-react';
 
 export const DiagramViewer: React.FC = () => {
   const {
     activeDocumentId,
+    activeWorkspaceId,
     documents,
     diagrams,
     activeDiagramType,
@@ -28,12 +31,12 @@ export const DiagramViewer: React.FC = () => {
     theme,
   } = useStudyStore();
 
-  const currentDoc = documents.find((d) => d.id === activeDocumentId);
+  const currentDoc = documents.find((d) => d.id === activeDocumentId && d.workspaceId === activeWorkspaceId);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Find diagrams for active document
+  // Find diagrams for active document and active workspace
   const currentDiagram = diagrams.find(
-    (d) => d.documentId === activeDocumentId && d.type === activeDiagramType
+    (d) => d.workspaceId === activeWorkspaceId && d.documentId === activeDocumentId && d.type === activeDiagramType
   );
 
   const [svgContent, setSvgContent] = useState<string>('');
@@ -45,6 +48,9 @@ export const DiagramViewer: React.FC = () => {
   useEffect(() => {
     if (currentDiagram) {
       setEditorCode(currentDiagram.mermaidCode);
+    } else {
+      setEditorCode('');
+      setSvgContent('');
     }
   }, [currentDiagram?.id, currentDiagram?.mermaidCode, activeDiagramType]);
 
@@ -125,6 +131,15 @@ export const DiagramViewer: React.FC = () => {
     );
   }
 
+  const handleAutoRepair = () => {
+    const fixed = sanitizeMermaidCode(editorCode);
+    setEditorCode(fixed);
+    if (currentDiagram) {
+      updateDiagramMermaidCode(currentDiagram.id, fixed);
+    }
+    setRenderError(null);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black">
       {/* Sub-header Navigation */}
@@ -197,13 +212,23 @@ export const DiagramViewer: React.FC = () => {
                 <Code2 className="w-3.5 h-3.5 text-blue-400" />
                 Mermaid Code Editor
               </span>
-              <button
-                onClick={handleSaveCode}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white text-black dark:bg-white dark:text-black hover:opacity-90 text-[11px] font-semibold transition cursor-pointer"
-              >
-                <Check className="w-3 h-3" />
-                <span>Save</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAutoRepair}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[11px] font-semibold transition cursor-pointer"
+                  title="Sanitize and auto-repair common syntax errors"
+                >
+                  <Wrench className="w-3 h-3 text-amber-400" />
+                  <span>Auto-Repair</span>
+                </button>
+                <button
+                  onClick={handleSaveCode}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white text-black dark:bg-white dark:text-black hover:opacity-90 text-[11px] font-semibold transition cursor-pointer"
+                >
+                  <Check className="w-3 h-3" />
+                  <span>Save</span>
+                </button>
+              </div>
             </div>
 
             <textarea
@@ -222,12 +247,21 @@ export const DiagramViewer: React.FC = () => {
         {/* Canvas Display */}
         <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center min-h-0 bg-neutral-50/50 dark:bg-black">
           {renderError && (
-            <div className="w-full max-w-xl mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-3">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">Mermaid Rendering Error</p>
-                <p className="mt-0.5 font-mono text-[11px] opacity-90">{renderError}</p>
+            <div className="w-full max-w-xl mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Mermaid Rendering Error</p>
+                  <p className="mt-0.5 font-mono text-[11px] opacity-90">{renderError}</p>
+                </div>
               </div>
+              <button
+                onClick={handleAutoRepair}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer"
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Auto-Repair</span>
+              </button>
             </div>
           )}
 

@@ -40,4 +40,15 @@ Integrity prevents unauthorized modification.`;
     expect(spec.mermaidCode).toContain('graph LR');
     expect(spec.nodeCount).toBeGreaterThan(0);
   });
+
+  it('should sanitize invalid lexical errors like == co-occurs == and unquoted nodes', async () => {
+    const { sanitizeMermaidCode } = await import('../logic/diagrams/sanitizer');
+    const invalidInput = `graph LR
+  ITS == co-occurs == Security ITS`;
+
+    const sanitized = sanitizeMermaidCode(invalidInput);
+    expect(sanitized).not.toContain('== co-occurs ==');
+    expect(sanitized).toContain('n_its["ITS"]');
+    expect(sanitized).toContain('n_security_its["Security ITS"]');
+  });
 });

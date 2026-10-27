@@ -1,9 +1,4 @@
-export type CourseCategory =
-  | 'Cloud Computing'
-  | 'Information Security'
-  | 'Mobile App Development'
-  | 'Software Testing Strategies'
-  | string;
+export type CourseCategory = string;
 
 export interface DocumentPage {
   pageNumber: number;
@@ -31,7 +26,7 @@ export interface StudyDocument {
   title: string;
   course: CourseCategory;
   fileName: string;
-  fileType: 'pdf' | 'image';
+  fileType: 'pdf' | 'image' | 'text' | 'document' | string;
   fileSize: number;
   totalPages: number;
   pages: DocumentPage[];

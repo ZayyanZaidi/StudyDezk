@@ -2,6 +2,7 @@ import { DiagramSpec } from '../../types/diagram';
 import { extractAcronyms } from '../extraction/acronyms';
 import { splitSentences } from '../nlp/segmenter';
 import { extractTopTfIdfTerms } from '../nlp/tfidf';
+import { sanitizeMermaidCode } from './sanitizer';
 
 function cleanId(str: string): string {
   const safe = str.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
@@ -101,7 +102,7 @@ export function generateConceptGraph(
     }
   }
 
-  const mermaidCode = mermaidLines.join('\n');
+  const mermaidCode = sanitizeMermaidCode(mermaidLines.join('\n'));
 
   return {
     id: `${docId}-diagram-concept`,

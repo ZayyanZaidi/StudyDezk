@@ -15,14 +15,15 @@ import {
 } from 'lucide-react';
 
 export const FlashcardDeck: React.FC = () => {
-  const { activeDocumentId, documents, flashcards, reviewFlashcard, selectedCourse } = useStudyStore();
-  const currentDoc = documents.find((d) => d.id === activeDocumentId);
+  const { activeDocumentId, documents, flashcards, reviewFlashcard, activeWorkspaceId, workspaces } = useStudyStore();
+  const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
+  const currentDoc = documents.find((d) => d.id === activeDocumentId && d.workspaceId === activeWorkspaceId);
 
-  // Filter flashcards: for active document or current course
+  // Strictly isolate flashcards: only cards for the active workspace & document
   const docCards = flashcards.filter((c) => {
-    if (activeDocumentId && c.documentId === activeDocumentId) return true;
-    if (!activeDocumentId && selectedCourse !== 'All Courses') return c.course === selectedCourse;
-    return true;
+    if (c.workspaceId && c.workspaceId !== activeWorkspaceId) return false;
+    if (activeDocumentId) return c.documentId === activeDocumentId;
+    return c.workspaceId === activeWorkspaceId;
   });
 
   const [currentIndex, setCurrentIndex] = useState(0);

@@ -3,17 +3,18 @@ import { useStudyStore } from '../../store/useStudyStore';
 import { Search, Sparkles, BookOpen, Tag, Hash } from 'lucide-react';
 
 export const GlossaryView: React.FC = () => {
-  const { activeDocumentId, documents, glossaryTerms, selectedCourse } = useStudyStore();
-  const currentDoc = documents.find((d) => d.id === activeDocumentId);
+  const { activeDocumentId, documents, glossaryTerms, activeWorkspaceId, workspaces } = useStudyStore();
+  const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
+  const currentDoc = documents.find((d) => d.id === activeDocumentId && d.workspaceId === activeWorkspaceId);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [acronymsOnly, setAcronymsOnly] = useState(false);
 
-  // Filter terms by active document or course
+  // Strictly isolate terms by active workspace
   const docTerms = glossaryTerms.filter((t) => {
-    if (activeDocumentId && t.documentId === activeDocumentId) return true;
-    if (!activeDocumentId && selectedCourse !== 'All Courses') return t.course === selectedCourse;
-    return true;
+    if (t.workspaceId && t.workspaceId !== activeWorkspaceId) return false;
+    if (activeDocumentId) return t.documentId === activeDocumentId;
+    return t.workspaceId === activeWorkspaceId;
   });
 
   const filtered = docTerms.filter((item) => {
